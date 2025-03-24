@@ -1,60 +1,91 @@
 import os
 import shutil
+from datetime import datetime
+import sys
 
-FROM_FOLDER = "from/"
-TO_FOLDER = "to/"
+# Add barcode module path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "modules", "barcode")))
+from barcode import process_image  # Import function to process images
 
-#ensures that the from and to folders exist
-os.makedirs(FROM_FOLDER, exist_ok=True)
-os.makedirs(TO_FOLDER, exist_ok=True)
+# Define paths
+IMAGES_FOLDER = "images/"
+OUTPUT_FOLDER = "outputimages/"
+LOG_FOLDER = "log/"
+LOG_FILE = os.path.join(LOG_FOLDER, "log.txt")
+OVERWRITE_FILE = os.path.join(LOG_FOLDER, "overwrite_counts.txt")
 
-#print to ensure they are found and ready
-print(f"Folders '{FROM_FOLDER}' and '{TO_FOLDER}' are ready")
+# Ensure folders exist
+os.makedirs(IMAGES_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs(LOG_FOLDER, exist_ok=True)
 
-#clears the to folder by looping through all files in the to folder and deleting them
-def clear_to_folder():
-    if os.path.exists(TO_FOLDER):
-        #print to know deletion works
-        print(f"Deleting all contents inside '{TO_FOLDER}'")
-        for filename in os.listdir(TO_FOLDER): 
-            file_path = os.path.join(TO_FOLDER, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)  
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path) 
-            except Exception as e:
-                print(f"Failed to delete some files in '{TO_FOLDER}'. Reason: {e}")
+# Clear log file
+open(LOG_FILE, "w").close()
+print("Cleared previous log.txt")
 
-#copies all the dicom files from the from folder to the to folder
-def copy_dicom_files():
-    #flag to check if any .dcm files were found
+# Load overwrite counts from file
+overwrite_count = {}
+if os.path.exists(OVERWRITE_FILE) and os.stat(OVERWRITE_FILE).st_size > 0:
+    print(f"Loading overwrite counts from {OVERWRITE_FILE}...")
+    with open(OVERWRITE_FILE, "r") as f:
+        for line in f:
+            parts = line.strip().split(" - Overwritten ")
+            if len(parts) == 2:
+                file_key = parts[0]
+                try:
+                    count = int(parts[1].split(" times")[0])
+                    overwrite_count[file_key] = count
+                    print(f"   ➕ {file_key}: {count}x")
+                except ValueError:
+                    print(f"   ⚠️ Skipped bad line: {line.strip()}")
+
+def copy_and_process_images():
+    """Processes and copies images, logs overwrite counts and file changes."""
     found_files = False
+    new_logs = []
 
-    ##loops through all the folders in the from folder and all sub folders
-    for root, _, files in os.walk(FROM_FOLDER): 
-        for filename in files:  
-            if filename.endswith(".dcm"): 
+    print(f"\nScanning '{IMAGES_FOLDER}' for images...\n")
+    for root, _, files in os.walk(IMAGES_FOLDER):
+        subfolder_name = os.path.relpath(root, IMAGES_FOLDER)
+        if subfolder_name == ".":
+            subfolder_name = ""
+        output_subdir = os.path.join(OUTPUT_FOLDER, subfolder_name)
+        os.makedirs(output_subdir, exist_ok=True)
+
+        for filename in files:
+            if filename.lower().endswith((".png", ".jpg", ".jpeg")):
                 found_files = True
                 source_path = os.path.join(root, filename)
                 new_filename = f"edited_{filename}"
-                destination_path = os.path.join(TO_FOLDER, new_filename)
-                
-                #copies and renames the files
+                destination_path = os.path.join(output_subdir, new_filename)
+                file_key = f"{subfolder_name}/{new_filename}"
+                overwrite_count[file_key] = overwrite_count.get(file_key, 0) + 1
+
+                print(f"Processing: {file_key} | Count: {overwrite_count[file_key]}")
                 try:
-                    shutil.copy2(source_path, destination_path)  
+                    processed_image_path = process_image(source_path, output_subdir)
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    log_entry = f"{timestamp} - {file_key} - Overwritten {overwrite_count[file_key]} times"
+                    new_logs.append(log_entry)
+                    print(f"Saved to: {processed_image_path}")
                 except Exception as e:
-                    print(f"Failed to copy some files from '{FROM_FOLDER}'. Reason: {e}")
+                    print(f"Failed to process: {file_key} | Reason: {e}")
 
-    #prints if any files were found or not
     if found_files:
-        print(f"Copied .dcm files from '{FROM_FOLDER}' to '{TO_FOLDER}'")
+        print("\n Writing logs...")
+        with open(LOG_FILE, "w") as f:
+            for entry in new_logs:
+                f.write(entry + "\n")
+                print(f"{entry}")
+
+        with open(OVERWRITE_FILE, "w") as f:
+            for file_key, count in overwrite_count.items():
+                line = f"{file_key} - Overwritten {count} times"
+                f.write(line + "\n")
+
+        print(f"\n Done! Logs saved to '{LOG_FILE}' and overwrite counts to '{OVERWRITE_FILE}'")
     else:
-        print(f"No .dcm files found in '{FROM_FOLDER}' or its subfolders.")
+        print("No images found to process.")
 
-#clears the to folder and moves files from the from folder to the to folder with a new name
-def move_and_rename_dicom_files():
-    clear_to_folder()  
-    copy_dicom_files()  
-
-move_and_rename_dicom_files()
+# Run the pipeline
+copy_and_process_images()

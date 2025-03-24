@@ -1,0 +1,13 @@
+matplotlib
+numpy
+opencv_python
+opencv_python_headless
+pylibdmtx
+pyzbar
+qreader
+ultralytics
+torch
+opencv-python
+matplotlib
+numpy
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
