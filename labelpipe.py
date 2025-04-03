@@ -15,6 +15,8 @@ LOG_FOLDER = "log/"
 LOG_FILE = os.path.join(LOG_FOLDER, "label_log.txt")
 OVERWRITE_FILE = os.path.join(LOG_FOLDER, "label_overwrite_counts.txt")
 CHECKPOINT_PATH = os.path.join("modules", "labelextract", "sam_vit_h_4b8939.pth")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "modules", "ocr")))
+
 
 # Ensure folders exist
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
@@ -45,7 +47,7 @@ sam, device = load_model(CHECKPOINT_PATH)
 print("Model loaded.")
 
 def copy_and_process_images():
-    """Processes and copies images for label removal using SAM segmentation model."""
+    """Processes and copies images for label removal using SAM segmentation model and OCR redaction."""
     found_files = False
     new_logs = []
 
@@ -84,6 +86,15 @@ def copy_and_process_images():
                     else:
                         print(f"No label found. Image saved as-is.")
 
+                    # ➕ Step 4: OCR redaction
+                    from ocr import run_ocr_on_image  # lazy import for modularity
+                    ocr_result_path = run_ocr_on_image(destination_path, output_subdir)
+                    if ocr_result_path:
+                        print(f"   🔤 OCR text redacted -> {ocr_result_path}")
+                    else:
+                        print(f"   ⚠️ OCR skipped or failed for {destination_path}")
+
+                    # Logging
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     log_entry = f"{timestamp} - {file_key} - Overwritten {overwrite_count[file_key]} times"
                     new_logs.append(log_entry)

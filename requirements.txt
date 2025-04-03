@@ -10,4 +10,10 @@ torch
 opencv-python
 matplotlib
 numpy
+pillow
+paddleocr
+paddlepaddle
+opencv-python 
+matplotlib 
+pillow-heif  
 segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
