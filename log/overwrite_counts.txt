@@ -13,5 +13,8 @@
 /edited_6.jpg - Overwritten 14 times
 /edited_2.jpg - Overwritten 14 times
 /edited_3.jpg - Overwritten 14 times
-./edited_1.jpg - Overwritten 11 times
+./edited_1.jpg - Overwritten 15 times
 ./edited_100.jpg - Overwritten 2 times
+./1.jpg - Overwritten 1 times
+./edited_intermediate_1.jpg - Overwritten 1 times
+./edited_1_intermediate.jpg - Overwritten 3 times

@@ -11,7 +11,8 @@ register_heif_opener()
 # Initialize OCR engine
 ocr = PaddleOCR(use_angle_cls=True, lang='en',
                 det_db_thresh=0.3, det_db_box_thresh=0.5,
-                det_db_unclip_ratio=2.0)
+                det_db_unclip_ratio=2.0,
+                show_log=False)
 
 def run_ocr_on_image(image_path, save_dir):
     try:
@@ -53,9 +54,9 @@ def run_ocr_on_image(image_path, save_dir):
         result_path = image_path 
         cv2.imwrite(result_path, original_image)
 
-        print(f"🕶️ Text redacted and saved to: {result_path}")
+        print(f"Text redacted and saved to: {result_path}")
         return result_path
 
     except Exception as e:
-        print(f"⚠️ OCR failed for {image_path}: {e}")
+        print(f"OCR failed for {image_path}: {e}")
         return None

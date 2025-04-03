@@ -16,4 +16,5 @@ paddlepaddle
 opencv-python 
 matplotlib 
 pillow-heif  
+pyvips
 segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
