@@ -6,35 +6,6 @@ from qreader import QReader
 from pylibdmtx.pylibdmtx import decode as zxing_decode
 from ultralytics import YOLO
 
-from functools import wraps
-import time
-import signal
-
-class TimeoutError(Exception):
-    pass
-
-def timeout(seconds=5, error_message="Function timed out"):
-    def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-        
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
-            return result
-        return wrapper
-    return decorator
-
-@timeout(5)  # 5 second timeout
-def safe_detect_barcodes_yolo(image):
-    results = model(image, show=False, conf=0.80, iou=0.90, verbose=False)
-    return results
-
 # Load YOLO model
 model = YOLO('../weights/best.pt')
 
@@ -72,31 +43,26 @@ def detect_qr_codes(image):
 
     return qr_detections
 
-def detect_barcodes_yolo(image):
-    try:
-        # Use the timeout-protected version
-        results = safe_detect_barcodes_yolo(image)
-    except TimeoutError:
-        print("YOLO detection timed out - skipping")
-        return []
-    
-    best_barcode = None
-    for result in results:
-        boxes = result.boxes
-        for box in boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            clsId = int(box.cls[0])
+# def detect_barcodes_yolo(image):
+#     results = model(image, show=False, conf=0.80, iou=0.90, line_width=1, verbose=False)
+#     best_barcode = None
 
-            if clsId >= len(classNames) or classNames[clsId] != "Bar_code":
-                continue
+#     for result in results:
+#         boxes = result.boxes
+#         for box in boxes:
+#             x1, y1, x2, y2 = map(int, box.xyxy[0])
+#             clsId = int(box.cls[0])
 
-            conf = float(box.conf[0])
-            x1, y1, x2, y2 = compute_tight_bbox(x1, y1, x2, y2, image.shape)
+#             if clsId >= len(classNames) or classNames[clsId] != "Bar_code":
+#                 continue
 
-            if best_barcode is None or conf > best_barcode["confidence"]:
-                best_barcode = {"bbox": (x1, y1, x2, y2), "confidence": conf, "method": "YOLO"}
+#             conf = float(box.conf[0])
+#             x1, y1, x2, y2 = compute_tight_bbox(x1, y1, x2, y2, image.shape)
 
-    return [best_barcode] if best_barcode else []
+#             if best_barcode is None or conf > best_barcode["confidence"]:
+#                 best_barcode = {"bbox": (x1, y1, x2, y2), "confidence": conf, "method": "YOLO"}
+
+#     return [best_barcode] if best_barcode else []
 
 def detect_barcodes_pyzbar(image):
     best_barcode = None
@@ -112,9 +78,9 @@ def detect_barcodes_pyzbar(image):
     return [best_barcode] if best_barcode else []
 
 def detect_barcodes(image):
-    yolo_barcodes = detect_barcodes_yolo(image)
-    if yolo_barcodes:
-         return yolo_barcodes
+    # yolo_barcodes = detect_barcodes_yolo(image)
+    # if yolo_barcodes:
+    #     return yolo_barcodes
 
     pyzbar_barcodes = detect_barcodes_pyzbar(image)
     if pyzbar_barcodes:
@@ -130,13 +96,8 @@ def erase_detected_regions(image, detections):
 
 def process_image(image_path, output_folder):
     image = cv2.imread(image_path)
-    print(f"Processing: {image_path}")  # Debug which file is being processed
-    image = cv2.imread(image_path)
     if image is None:
-        print(f"Failed to load image: {image_path}")
         return None
-    
-    print(f"Image dimensions: {image.shape}") 
 
     qr_results = detect_qr_codes(image)
     barcode_results = detect_barcodes(image)
