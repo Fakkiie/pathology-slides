@@ -17,4 +17,7 @@
 ./edited_100.jpg - Overwritten 2 times
 ./1.jpg - Overwritten 1 times
 ./edited_intermediate_1.jpg - Overwritten 1 times
-./edited_1_intermediate.jpg - Overwritten 3 times
+./edited_1_intermediate.jpg - Overwritten 5 times
+./edited_12_intermediate.jpg - Overwritten 9 times
+./edited_2_intermediate.jpg - Overwritten 9 times
+./edited_20_intermediate.jpg - Overwritten 9 times
